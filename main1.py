@@ -19,6 +19,7 @@ BULLET_DAMAGE = 10
 ENEMY_HP = 100
 HIT_SCORE = 10
 KILL_SCORE = 100
+PLAYER_HP = 50
 
 class Bullet(arcade.Sprite):
     def __init__(self, position, velocity, damage):
@@ -46,6 +47,7 @@ class Player(arcade.Sprite):
     def __init__(self):
         super().__init__("assets/narwhal.png", 0.5)
         (self.center_x, self.center_y) = STARTING_LOCATION
+        self.hp = PLAYER_HP
 
 class Enemy(arcade.Sprite):
     def __init__(self, position):
@@ -56,6 +58,12 @@ class Enemy(arcade.Sprite):
         super().__init__("assets/penguin.png", 0.5)
         self.hp = ENEMY_HP
         (self.center_x, self.center_y) = position
+    def shoot(self):
+        x = self.center_x
+        y = self.center_y - 50
+        bullet = Bullet((x,y),(0,-10),BULLET_DAMAGE)
+        return bullet
+
 
 
         
@@ -74,6 +82,8 @@ class Window(arcade.Window):
         self.enemy_list = arcade.SpriteList()
         self.player = Player()
         self.score = 0
+        self.player_list = arcade.SpriteList()
+        self.player_list.append(self.player)
 
     def setup(self):
         '''
@@ -88,17 +98,34 @@ class Window(arcade.Window):
     def update(self, delta_time):
         self.bullet_list.update()
         for e in self.enemy_list:
-            # check for collision
-            # for every bullet that hits, decrease the hp and then see if it dies
-            # increase the score
-            # e.kill() will remove the enemy sprite from the game
-            # the pass statement is a placeholder. Remove line 81 when you add your code
-            pass
+            chanceOfShooting = (random.random() < .01)
+            damage = arcade.check_for_collision_with_list(e, self.bullet_list)
+            if chanceOfShooting:
+                bullet = e.shoot()
+                self.bullet_list.append(bullet)
+            for d in damage:
+                e.hp -= d.damage
+                d.kill()
+                if e.hp <= 0:
+                    e.kill()
+                    self.score = self.score + KILL_SCORE
+                else:
+                    self.score = self.score + HIT_SCORE
+        damage = arcade.check_for_collision_with_list(self.player, self.bullet_list) 
+        for p in self.player_list:   
+            for d in damage:
+                p.hp -= d.damage
+                d.kill()
+                if p.hp <= 0:
+                    p.kill()
+
+                    
+            
 
     def on_draw(self):
         arcade.start_render()
         arcade.draw_text(str(self.score), 20, SCREEN_HEIGHT - 40, open_color.white, 16)
-        self.player.draw()
+        self.player_list.draw()
         self.bullet_list.draw()
         self.enemy_list.draw()
 
@@ -110,9 +137,11 @@ class Window(arcade.Window):
 
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_LEFT:
-            #fire a bullet
-            #the pass statement is a placeholder. Remove line 97 when you add your code
-            pass
+            x = self.player.center_x
+            y = self.player.center_y + 50
+            bullet = Bullet((x,y),(0,10),BULLET_DAMAGE)
+            self.bullet_list.append(bullet)
+            
 
 def main():
     window = Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
